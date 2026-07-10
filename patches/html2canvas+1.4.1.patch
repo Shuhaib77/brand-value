@@ -1,0 +1,18 @@
+diff --git a/node_modules/html2canvas/dist/html2canvas.esm.js b/node_modules/html2canvas/dist/html2canvas.esm.js
+index dab56ad..7d2781d 100644
+--- a/node_modules/html2canvas/dist/html2canvas.esm.js
++++ b/node_modules/html2canvas/dist/html2canvas.esm.js
+@@ -1832,7 +1832,12 @@ var SUPPORTED_COLOR_FUNCTIONS = {
+     hsl: hsl,
+     hsla: hsl,
+     rgb: rgb,
+-    rgba: rgb
++    rgba: rgb,
++    oklab: function() { return 0xff000000; },
++    oklch: function() { return 0xff000000; },
++    lab: function() { return 0xff000000; },
++    lch: function() { return 0xff000000; },
++    'color-mix': function() { return 0xff000000; }
+ };
+ var parseColor = function (context, value) {
+     return color$1.parse(context, Parser.create(value).parseComponentValue());
