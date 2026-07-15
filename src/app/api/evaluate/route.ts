@@ -16,10 +16,14 @@ function isLikelyPersonName(name: string): boolean {
   const words = name.split(/\s+/).filter(Boolean)
   if (words.length < 2 || words.length > 6) return false
   if (/\b(Llp|Ltd|Inc|Corp|Co(?![a-z])|Company|Group|Technologies?|Enterprises?)\s*$/i.test(name)) return false
-  if (/^(of|at|in|on|by|for|to|the|a|an|and|or)\s/i.test(name)) return false
+  if (/^(of|at|in|on|by|for|to|the|a|an|and|or|about|creating|building|developing|leading|managing|contact|services|solutions|team|home|design|marketing|branding|strategy|technology|consulting)\s/i.test(name)) return false
   for (const w of words) {
-    if (/^(as|of|in|on|at|by|for|to|the|a|an|and|or|with)$/i.test(w)) return false
+    if (/^(as|of|in|on|at|by|for|to|the|a|an|and|or|with|about|our|your|team)$/i.test(w)) return false
+    if (w.includes('.') && !w.includes('.com')) return false
   }
+  if (/[a-z]{3,}ing$/i.test(words[0]) && words[0].length > 4) return false
+  if (words.length === 2 && /^(Partner|Director|Manager|Lead|Head|Chief|Member|Advisor|Consultant|Specialist)$/i.test(words[1])) return false
+  if (words.length === 2 && words[0] === words[1]) return false
   const titleCount = words.filter(w => /^(Chief|Executive|Officer|Manager|Director|Head|Lead|Senior|Junior|Assistant|Associate)$/i.test(w)).length
   if (titleCount >= Math.ceil(words.length / 2)) return false
   return true
@@ -135,6 +139,13 @@ export async function POST(req: NextRequest) {
 
     const { data: extracted, modelUsed: extractModel } = await extractCompanyInfo(extractionInput)
     const extractedCd = extracted.companyDetails as Record<string, unknown> | undefined
+
+    if (extractedCd?.founderName && !isLikelyPersonName(extractedCd.founderName as string)) {
+      extractedCd.founderName = null
+    }
+    if (extractedCd?.ceoName && !isLikelyPersonName(extractedCd.ceoName as string)) {
+      extractedCd.ceoName = null
+    }
 
     const founderStr = extractedCd?.founderName
     if (founderStr && typeof founderStr === "string") {
