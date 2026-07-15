@@ -2,9 +2,10 @@ import Groq from "groq-sdk"
 
 const groq = new Groq({ apiKey: process.env.GROQ_API_KEY || "" })
 
-const FAST_MODEL = "meta-llama/llama-4-scout-17b-16e-instruct"
 const REASONING_MODEL = "llama-3.3-70b-versatile"
-const FALLBACK_FOR_REASONING = [FAST_MODEL, "llama-3.1-8b-instant"]
+const FAST_MODEL = "meta-llama/llama-4-scout-17b-16e-instruct"
+const FALLBACK_MODEL = "llama-3.1-8b-instant"
+const FALLBACK_CHAIN = [FAST_MODEL, FALLBACK_MODEL]
 
 const JSON_REINFORCEMENT = "\n\nIMPORTANT: Return ONLY valid JSON. Double-check all brackets, commas, and quotes. Every opening brace must have a matching closing brace."
 
@@ -16,71 +17,147 @@ function isLongRateLimit(msg: string): boolean {
   return h > 0 || m > 1
 }
 
+function isObject(val: unknown): val is Record<string, unknown> {
+  return typeof val === "object" && val !== null && !Array.isArray(val)
+}
+
+function validateExtractShape(data: unknown): string | null {
+  if (!isObject(data)) return "response is not an object"
+  if (typeof data.companyName !== "string" && data.companyName !== null) return "companyName must be string or null"
+  if (typeof data.industry !== "string" && data.industry !== null) return "industry must be string or null"
+  if (!Array.isArray(data.productsOrServices)) return "productsOrServices must be an array"
+  if (typeof data.businessDescription !== "string" && data.businessDescription !== null) return "businessDescription must be string or null"
+  if (!isObject(data.companyDetails)) return "companyDetails must be an object"
+  const cd = data.companyDetails as Record<string, unknown>
+  if (cd.founderName !== undefined && typeof cd.founderName !== "string" && cd.founderName !== null) return "companyDetails.founderName must be string or null"
+  if (cd.ceoName !== undefined && typeof cd.ceoName !== "string" && cd.ceoName !== null) return "companyDetails.ceoName must be string or null"
+  if (cd.leadershipTeam !== undefined && !Array.isArray(cd.leadershipTeam)) return "companyDetails.leadershipTeam must be an array"
+  if (cd.employeeCount !== undefined && typeof cd.employeeCount !== "string" && cd.employeeCount !== null) return "companyDetails.employeeCount must be string or null"
+  if (cd.foundedYear !== undefined && typeof cd.foundedYear !== "string" && cd.foundedYear !== null) return "companyDetails.foundedYear must be string or null"
+  if (cd.fundingStage !== undefined && typeof cd.fundingStage !== "string" && cd.fundingStage !== null) return "companyDetails.fundingStage must be string or null"
+  if (cd.estimatedRevenue !== undefined && typeof cd.estimatedRevenue !== "string" && cd.estimatedRevenue !== null) return "companyDetails.estimatedRevenue must be string or null"
+  return null
+}
+
+function validateEvaluateShape(data: unknown): string | null {
+  if (!isObject(data)) return "response is not an object"
+  if (!isObject(data.categoryScores)) return "categoryScores must be an object"
+  const required = ["brandIdentity", "websiteExperience", "trustCredibility", "seoVisibility", "contentQuality", "socialMediaPresence", "customerReputation", "performanceAccessibility", "technicalQuality"]
+  for (const key of required) {
+    const cat = (data.categoryScores as Record<string, unknown>)[key]
+    if (!isObject(cat) || typeof (cat as Record<string, unknown>).score !== "number" || typeof (cat as Record<string, unknown>).reasoning !== "string") {
+      return `categoryScores.${key} must have score (number) and reasoning (string)`
+    }
+  }
+  if (!Array.isArray(data.strengths)) return "strengths must be an array"
+  if (!Array.isArray(data.weaknesses)) return "weaknesses must be an array"
+  if (!Array.isArray(data.risks)) return "risks must be an array"
+  if (!Array.isArray(data.opportunities)) return "opportunities must be an array"
+  return null
+}
+
+function validateActionsShape(data: unknown): string | null {
+  if (!isObject(data)) return "response is not an object"
+  if (!Array.isArray(data.top10Recommendations)) return "top10Recommendations must be an array"
+  if (!Array.isArray(data.actionPlan30Day)) return "actionPlan30Day must be an array"
+  if (!Array.isArray(data.actionPlan90Day)) return "actionPlan90Day must be an array"
+  if (!Array.isArray(data.brandGrowthStrategy1Year)) return "brandGrowthStrategy1Year must be an array"
+  if (typeof data.finalVerdict !== "string") return "finalVerdict must be a string"
+  return null
+}
+
 async function callGroq(
   systemPrompt: string,
   userContent: string,
   maxTokens = 2000,
-  model = FAST_MODEL,
-  maxRetries = 3,
-  fallbackModels: string[] = []
+  model = REASONING_MODEL,
+  fallbackModels: string[] = [],
 ) {
   const modelsToTry = [model, ...fallbackModels]
 
   for (const currentModel of modelsToTry) {
-    for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    for (let attempt = 0; attempt <= 4; attempt++) {
       try {
-        const temp = attempt > 0 ? 0.1 : 0.2
-        const content = attempt > 0 ? userContent + JSON_REINFORCEMENT : userContent
-
         const response = await groq.chat.completions.create({
           model: currentModel,
           messages: [
             { role: "system", content: systemPrompt },
-            { role: "user", content },
+            { role: "user", content: attempt > 0 ? userContent + JSON_REINFORCEMENT : userContent },
           ],
           response_format: { type: "json_object" },
-          temperature: temp,
+          temperature: 0,
           max_tokens: maxTokens,
         })
 
         const text = response.choices[0]?.message?.content
         if (!text) throw new Error("Groq returned empty response")
-        return JSON.parse(text)
+
+        const data = JSON.parse(text)
+        return { data, modelUsed: currentModel }
       } catch (error: unknown) {
-        const err = error as { status?: number; message?: string; code?: string; error?: { code?: string } }
+        const err = error as { status?: number; message?: string; code?: string; error?: { status?: number; code?: string; message?: string } }
         const errMsg = err?.message ?? ""
-        const status = err?.status ?? (err as any)?.error?.status
-        const code = err?.code ?? (err as any)?.error?.code
+        const status = err?.status ?? err?.error?.status
+        const code = err?.code ?? err?.error?.code
         const isQuota = status === 429 || errMsg.includes("429")
         const isLongWait = isQuota && isLongRateLimit(errMsg)
         const isInvalidJSON = status === 400 && (code === "json_validate_failed" || errMsg.includes("json_validate_failed"))
 
         if (isLongWait) {
-          console.warn(`Groq daily TPD limit on ${currentModel}. Trying next model...`)
+          console.warn(`Groq ${currentModel}: daily TPD limit. Trying next model...`)
           break
         }
 
-        if (isQuota && attempt < maxRetries) {
-          const delay = (attempt + 1) * 15000
-          console.warn(`Groq 429 on ${currentModel} (attempt ${attempt + 1}/${maxRetries}). Retrying in ${delay}ms...`)
+        if (isQuota && attempt < 4) {
+          const delay = Math.min(1000 * Math.pow(3, attempt), 45000)
+          console.warn(`Groq 429 on ${currentModel} (attempt ${attempt + 1}/5). Retrying in ${delay}ms...`)
           await new Promise(r => setTimeout(r, delay))
           continue
         }
 
-        if (isInvalidJSON && attempt < maxRetries) {
-          console.warn(`Groq JSON validation failed on ${currentModel} (attempt ${attempt + 1}/${maxRetries}). Retrying...`)
+        if (isInvalidJSON && attempt < 4) {
+          console.warn(`Groq JSON invalid on ${currentModel} (attempt ${attempt + 1}/5). Retrying...`)
           await new Promise(r => setTimeout(r, 1000))
           continue
         }
 
-        if (currentModel === modelsToTry[modelsToTry.length - 1] && attempt === maxRetries) {
-          throw error
+        if (attempt === 4) {
+          console.error(`Groq ${currentModel}: all 5 attempts failed.`)
+          if (currentModel === modelsToTry[modelsToTry.length - 1]) {
+            throw error
+          }
+          console.warn(`Groq ${currentModel}: falling back to next model...`)
         }
       }
     }
   }
 
-  throw new Error("All Groq models exhausted. Please wait a few minutes and try again.")
+  throw new Error("All Groq models exhausted after 5 attempts each.")
+}
+
+async function callGroqWithValidation<T>(
+  systemPrompt: string,
+  userContent: string,
+  maxTokens: number,
+  validate: (data: unknown) => string | null,
+  model = REASONING_MODEL,
+  fallbackModels: string[] = [],
+): Promise<{ data: T; modelUsed: string }> {
+  for (let attempt = 0; attempt <= 3; attempt++) {
+    const validationHint = attempt > 0
+      ? `\n\nPREVIOUS ATTEMPT FAILED VALIDATION. Ensure ALL required fields are present with correct types. Return the EXACT JSON structure requested.`
+      : ""
+
+    const { data, modelUsed } = await callGroq(systemPrompt, userContent + validationHint, maxTokens, model, fallbackModels)
+
+    const err = validate(data)
+    if (!err) return { data: data as T, modelUsed }
+
+    console.warn(`Schema validation failed (attempt ${attempt + 1}/4): ${err}. Retrying...`)
+    userContent += `\n\nVALIDATION ERROR (fix this): ${err}`
+  }
+
+  throw new Error(`Failed to get valid response after 4 validation attempts.`)
 }
 
 const EXTRACT_PROMPT = `You are a data extraction specialist. Extract structured company data from the provided website content, Wikipedia data, and web search results.
@@ -88,10 +165,12 @@ const EXTRACT_PROMPT = `You are a data extraction specialist. Extract structured
 Rules:
 - Use Wikipedia data as the primary source for company details (founding year, founder, employees, revenue, CEO, headquarters, industry)
 - Use website content for brand-specific fields (mission, values, products, USP, brand personality)
-- Never invent data. If a field cannot be determined, set it to null. Do NOT guess or hallucinate numbers.
+- For ALL fields: Never invent data. Extract ONLY from the provided text. If a field cannot be determined from the text, set it to null.
+- For PEOPLE fields (founderName, ceoName, ownerName, leadershipTeam): Scan the provided text for names associated with "Founder", "Co-Founder", "CEO", "Owner", "President", "Director". Names often appear in formats like "Name — Title", "Name: Title", "Name (CEO)", "by Name", "Name is the founder", "Name and Name founded". If a person's name is not found in the provided text, set the field to null.
 - For leadershipTeam, extract actual names, titles, and bios from team/about pages. Look for biographical text near each team member name — often it appears in a sentence or paragraph right after the name and title.
 - For bio extraction: scan the text around each team member for descriptive sentences about their background, education, previous roles, or accomplishments.
 - Extract owner and co-founder information from About page, team page, and website content. The owner may be listed alongside the founder or separately.
+- CRITICAL: Extract ALL co-founders. If the text mentions multiple people as founders (e.g., "Founded by X, Y, and Z" or "co-founders X and Y"), include each person as a separate entry in the leadershipTeam array with title "Co-Founder". Do NOT stop at just one founder.
 - For employeeCount, scan ALL provided text for phrases like "we have X employees", "team of X people", "over X staff", "X+ employees", "employs X people" — not just Wikipedia. If multiple sources differ, use the most specific one.
 - For digitalFootprint, use only what's found in web search results.
 - For companyDetails fields like awards, certifications, partnerships — look for these in the website content (often in "About", "Press", or footer sections).
@@ -177,20 +256,6 @@ const EVALUATE_PROMPT = `You are a senior Brand Strategy Consultant with deep in
 | 5-6 | Average — functional but not distinctive; adequate evidence |
 | 3-4 | Weak — unclear, inconsistent, or poor execution; weak or missing evidence |
 | 1-2 | Very poor — missing or damaging to brand; no evidence found |
-
-## Weight Reference (each category contributes to final 0-100 score)
-
-| Category | Weight |
-|---|---|
-| Brand Identity | 14 |
-| Website Experience | 14 |
-| Trust & Credibility | 14 |
-| SEO & Visibility | 14 |
-| Content Quality | 9 |
-| Social Media Presence | 9 |
-| Customer Reputation | 9 |
-| Performance & Accessibility | 9 |
-| Technical Quality | 9 |
 
 ## Categories to Score — Be thorough, check EVERY item listed
 
@@ -318,22 +383,22 @@ Return this exact JSON:
     "performanceAccessibility": {"score":0,"reasoning":"Evidence: ... Assessment: ..."},
     "technicalQuality": {"score":0,"reasoning":"Evidence: ... Assessment: ..."}
   },
-  "brandScore": 0 (0-100 weighted score, compute as: sum of (categoryScore/10 * categoryWeight) / totalWeight * 100),
-  "brandGrade": "string (A+ for 90+, A for 80+, B for 70+, C for 60+, D for 40+, F for <40)",
-  "executiveSummary": "string (3-5 sentences summarizing key findings, referencing specific data)",
+  "brandScore": 0,
+  "brandGrade": "string",
+  "executiveSummary": "string",
   "strengths": ["string"],
   "weaknesses": ["string"],
   "risks": ["string"],
   "opportunities": ["string"],
-  "trustAnalysis": "string (detailed analysis of trust signals and credibility, 3-5 sentences)",
-  "brandIdentityAnalysis": "string (detailed analysis of brand identity strength, 3-5 sentences)",
-  "websiteUXAnalysis": "string (detailed analysis of website user experience, 3-5 sentences)",
-  "seoAnalysis": "string (detailed analysis of SEO and visibility, 3-5 sentences)",
-  "contentAnalysis": "string (detailed analysis of content quality, 3-5 sentences)",
-  "reputationAnalysis": "string (detailed analysis of customer reputation and reviews, 3-5 sentences)",
-  "technicalAnalysis": "string (detailed analysis of technical quality, 3-5 sentences)",
-  "topImprovements": ["string (top 10 specific, actionable improvements)"],
-  "expectedScoreAfterImprovements": 0 (0-100, what the score could be if top improvements are implemented)
+  "trustAnalysis": "string",
+  "brandIdentityAnalysis": "string",
+  "websiteUXAnalysis": "string",
+  "seoAnalysis": "string",
+  "contentAnalysis": "string",
+  "reputationAnalysis": "string",
+  "technicalAnalysis": "string",
+  "topImprovements": ["string"],
+  "expectedScoreAfterImprovements": 0
 }`
 
 const ACTION_PROMPT = `You are a brand strategy consultant. Based on the evaluation below, create specific, actionable recommendations.
@@ -348,14 +413,14 @@ Format: Return exact JSON:
   "confidenceNote": "string|null"
 }`
 
-export async function extractCompanyInfo(userPrompt: string) {
-  return callGroq(EXTRACT_PROMPT, userPrompt, 3000, FAST_MODEL)
+export async function extractCompanyInfo(userPrompt: string): Promise<{ data: Record<string, unknown>; modelUsed: string }> {
+  return callGroqWithValidation<Record<string, unknown>>(EXTRACT_PROMPT, userPrompt, 3000, validateExtractShape, REASONING_MODEL, FALLBACK_CHAIN)
 }
 
-export async function evaluateBrand(userPrompt: string) {
-  return callGroq(EVALUATE_PROMPT, userPrompt, 6000, REASONING_MODEL, 3, FALLBACK_FOR_REASONING)
+export async function evaluateBrand(userPrompt: string): Promise<{ data: Record<string, unknown>; modelUsed: string }> {
+  return callGroqWithValidation<Record<string, unknown>>(EVALUATE_PROMPT, userPrompt, 6000, validateEvaluateShape, REASONING_MODEL, FALLBACK_CHAIN)
 }
 
-export async function generateActions(userPrompt: string) {
-  return callGroq(ACTION_PROMPT, userPrompt, 4000, REASONING_MODEL, 2, FALLBACK_FOR_REASONING)
+export async function generateActions(userPrompt: string): Promise<{ data: Record<string, unknown>; modelUsed: string }> {
+  return callGroqWithValidation<Record<string, unknown>>(ACTION_PROMPT, userPrompt, 4000, validateActionsShape, REASONING_MODEL, FALLBACK_CHAIN)
 }

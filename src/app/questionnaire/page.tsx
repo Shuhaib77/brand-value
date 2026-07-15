@@ -2,7 +2,9 @@
 
 import { useSearchParams } from "next/navigation"
 import { Suspense } from "react"
+import { ArrowLeft, Link } from "lucide-react"
 import QuestionnaireForm from "@/components/forms/questionnaire-form"
+import { Button } from "@/components/ui/button"
 
 function QuestionnaireContent() {
   const searchParams = useSearchParams()
@@ -12,8 +14,8 @@ function QuestionnaireContent() {
     return (
       <div className="flex-1 flex items-center justify-center px-4">
         <div className="text-center max-w-md">
-          <div className="text-6xl mb-4">🔗</div>
-          <h2 className="text-xl font-bold text-gray-900 mb-2">No URL Provided</h2>
+          <Link className="w-16 h-16 mx-auto mb-4 text-gray-300" />
+          <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-2">No URL Provided</h2>
           <p className="text-gray-500 mb-6">Please start by entering a company website URL.</p>
           <a
             href="/"
@@ -29,25 +31,21 @@ function QuestionnaireContent() {
   const decodedUrl = decodeURIComponent(url)
 
   return (
-    <div className="flex-1 px-4 py-12">
+    <div className="flex-1 px-4 py-8 sm:py-12">
       <div className="max-w-2xl mx-auto">
         <div className="mb-8">
-          <a href="/" className="text-sm text-purple-600 hover:text-purple-700 flex items-center gap-1 mb-4">
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-            </svg>
+          <Button variant="ghost" size="sm" onClick={() => window.history.back()} className="mb-4">
+            <ArrowLeft className="w-4 h-4" />
             Back
-          </a>
-          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">
+          </Button>
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-gray-100">
             Brand Assessment Questionnaire
           </h1>
           <p className="text-gray-500 mt-2">
             Help us understand your brand better. Answer as many questions as you like, or skip to get an instant evaluation.
           </p>
           <div className="mt-3 flex items-center gap-2 text-sm text-gray-400">
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
-            </svg>
+            <Link className="w-4 h-4" />
             {decodedUrl}
           </div>
         </div>
@@ -63,10 +61,10 @@ export default function QuestionnairePage() {
     <Suspense
       fallback={
         <div className="flex-1 flex items-center justify-center">
-          <div className="flex gap-1">
-            <div className="w-2 h-2 bg-purple-500 rounded-full animate-pulse-dot" />
-            <div className="w-2 h-2 bg-purple-500 rounded-full animate-pulse-dot" />
-            <div className="w-2 h-2 bg-purple-500 rounded-full animate-pulse-dot" />
+          <div className="flex gap-2">
+            <div className="w-3 h-3 bg-purple-500 rounded-full animate-pulse-dot" />
+            <div className="w-3 h-3 bg-purple-500 rounded-full animate-pulse-dot" />
+            <div className="w-3 h-3 bg-purple-500 rounded-full animate-pulse-dot" />
           </div>
         </div>
       }

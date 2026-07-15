@@ -1,5 +1,9 @@
 "use client"
 
+import { Card, CardHeader, CardContent } from "@/components/ui/card"
+import { Badge } from "@/components/ui/badge"
+import { Users, Star, ExternalLink, Briefcase, Crown, Coins } from "lucide-react"
+
 interface LeadershipMember {
   name: string
   title: string
@@ -48,168 +52,189 @@ function LinkIcon({ url }: { url: string | null | undefined }) {
       href={url}
       target="_blank"
       rel="noopener noreferrer"
-      className="inline-flex items-center gap-1.5 text-blue-600 hover:text-blue-800 underline text-sm truncate max-w-full"
+      className="inline-flex items-center gap-1.5 text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 underline text-sm truncate max-w-full transition-colors"
     >
-      <svg className="w-4 h-4 flex-shrink-0" fill="currentColor" viewBox="0 0 24 24">
-        <path d="M19 0h-14c-2.761 0-5 2.239-5 5v14c0 2.761 2.239 5 5 5h14c2.762 0 5-2.239 5-5v-14c0-2.761-2.238-5-5-5zm-11 19h-3v-11h3v11zm-1.5-12.268c-.966 0-1.75-.79-1.75-1.764s.784-1.764 1.75-1.764 1.75.79 1.75 1.764-.783 1.764-1.75 1.764zm13.5 12.268h-3v-5.604c0-3.368-4-3.113-4 0v5.604h-3v-11h3v1.765c1.396-2.586 7-2.777 7 2.476v6.759z"/>
-      </svg>
+      <ExternalLink className="w-4 h-4 flex-shrink-0" />
       <span className="truncate">{url.replace(/^https?:\/\//, "")}</span>
     </a>
-  )
-}
-
-function Badge({ children, variant = "default" }: { children: React.ReactNode; variant?: "default" | "success" | "accent" | "secondary" }) {
-  const styles = {
-    default: "bg-purple-100 text-purple-700",
-    success: "bg-green-100 text-green-700",
-    accent: "bg-cyan-100 text-cyan-700",
-    secondary: "bg-amber-100 text-amber-700",
-  }
-  return (
-    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${styles[variant]}`}>
-      {children}
-    </span>
-  )
-}
-
-function Card({ title, children }: { title?: string; children: React.ReactNode }) {
-  return (
-    <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
-      {title && (
-        <div className="px-5 py-3 bg-gradient-to-r from-purple-50 to-cyan-50 border-b border-gray-100">
-          <h3 className="font-semibold text-gray-900 text-sm">{title}</h3>
-        </div>
-      )}
-      <div className="p-5">{children}</div>
-    </div>
   )
 }
 
 export default function FounderOwners({ details, wikiVerified }: FounderOwnersProps) {
   if (!details) return null
 
+  const founders = (details.leadershipTeam || []).filter(
+    (m) => m.title === "Founder"
+  )
   const coFounders = (details.leadershipTeam || []).filter(
     (m) => m.title?.toLowerCase().includes("co-founder")
   )
 
   const hasOwner = details.ownerName && details.ownerName !== details.founderName
-  const hasCeo = details.ceoName && details.ceoName !== details.founderName
+  const hasCeo = details.ceoName && !founders.some(f => f.name === details.ceoName) && !coFounders.some(cf => cf.name === details.ceoName)
 
   return (
     <div className="space-y-6">
-      {details.founderName && (
-        <Card title="Founder">
-          <div className="flex items-start gap-4">
-            <div className="w-12 h-12 rounded-full bg-gradient-to-br from-purple-500 to-cyan-500 flex items-center justify-center text-white text-xl font-bold flex-shrink-0">
-              {details.founderName.charAt(0)}
+      {founders.length > 0 && (
+        <Card>
+          <CardHeader gradient>
+            <div className="flex items-center gap-2">
+              <Crown className="w-4 h-4 text-purple-600" />
+              <h3 className="font-semibold text-gray-900 text-sm">Founder{founders.length > 1 ? "s" : ""}</h3>
             </div>
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2 flex-wrap mb-1.5">
-                <h3 className="font-semibold text-lg text-gray-900">{details.founderName}</h3>
-                {wikiVerified?.founderName && <Badge variant="success">✓ Wikipedia Verified</Badge>}
-                <Badge>Founder</Badge>
-                {details.founderName === details.ceoName && <Badge variant="accent">CEO</Badge>}
-                {details.founderName === details.ownerName && <Badge variant="secondary">Owner</Badge>}
-              </div>
-              {details.founderBackground && (
-                <p className="text-sm text-gray-600 mb-2 leading-relaxed">{details.founderBackground}</p>
-              )}
-              <LinkIcon url={details.founderLinkedInUrl} />
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              {founders.map((f, i) => (
+                <div key={i} className="flex items-start gap-3 pb-4 last:pb-0 last:border-0 border-b border-gray-100 dark:border-gray-700">
+                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-purple-500 to-cyan-500 flex items-center justify-center text-white text-sm font-bold flex-shrink-0 shadow-sm">
+                    {f.name?.charAt(0) || "?"}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap mb-1.5">
+                      <h3 className="font-semibold text-lg text-gray-900 dark:text-gray-100">{f.name}</h3>
+                      {i === 0 && wikiVerified?.founderName && <Badge variant="success">Wiki Verified</Badge>}
+                      <Badge>Founder</Badge>
+                      {f.name === details.ceoName && <Badge variant="accent">CEO</Badge>}
+                      {f.name === details.ownerName && <Badge variant="secondary">Owner</Badge>}
+                    </div>
+                    {i === 0 && details.founderBackground && (
+                      <p className="text-sm text-gray-600 dark:text-gray-400 mb-2 leading-relaxed">{details.founderBackground}</p>
+                    )}
+                    <LinkIcon url={i === 0 ? details.founderLinkedInUrl : f.linkedInUrl} />
+                  </div>
+                </div>
+              ))}
             </div>
-          </div>
+          </CardContent>
         </Card>
       )}
 
       {coFounders.length > 0 && (
-        <Card title={`Co-Founder${coFounders.length > 1 ? "s" : ""}`}>
-          <div className="space-y-4">
-            {coFounders.map((cf, i) => (
-              <div key={i} className="flex items-start gap-3 pb-4 last:pb-0 last:border-0 border-b border-gray-100">
-                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-cyan-400 to-purple-400 flex items-center justify-center text-white text-sm font-bold flex-shrink-0">
-                  {cf.name?.charAt(0) || "?"}
+        <Card>
+          <CardHeader gradient>
+            <div className="flex items-center gap-2">
+              <Users className="w-4 h-4 text-purple-600" />
+              <h3 className="font-semibold text-gray-900 text-sm">Co-Founder{coFounders.length > 1 ? "s" : ""}</h3>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              {coFounders.map((cf, i) => (
+                <div key={i} className="flex items-start gap-3 pb-4 last:pb-0 last:border-0 border-b border-gray-100 dark:border-gray-700">
+                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-cyan-400 to-purple-400 flex items-center justify-center text-white text-sm font-bold flex-shrink-0 shadow-sm">
+                    {cf.name?.charAt(0) || "?"}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="font-medium text-gray-900 dark:text-gray-100">{cf.name}</div>
+                    <div className="text-sm text-gray-500 mb-1">{cf.title}</div>
+                    {cf.bio && <p className="text-sm text-gray-600 dark:text-gray-400 mb-1.5">{cf.bio}</p>}
+                    {cf.yearsAtCompany && (
+                      <p className="text-xs text-gray-400 mb-1.5">Years at company: {cf.yearsAtCompany}</p>
+                    )}
+                    <LinkIcon url={cf.linkedInUrl} />
+                  </div>
                 </div>
-                <div className="flex-1 min-w-0">
-                  <div className="font-medium text-gray-900">{cf.name}</div>
-                  <div className="text-sm text-gray-500 mb-1">{cf.title}</div>
-                  {cf.bio && <p className="text-sm text-gray-600 mb-1.5">{cf.bio}</p>}
-                  {cf.yearsAtCompany && (
-                    <p className="text-xs text-gray-400 mb-1.5">Years at company: {cf.yearsAtCompany}</p>
-                  )}
-                  <LinkIcon url={cf.linkedInUrl} />
-                </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          </CardContent>
         </Card>
       )}
 
       {hasOwner && (
-        <Card title="Owner">
-          <div className="flex items-start gap-4">
-            <div className="w-12 h-12 rounded-full bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center text-white text-xl font-bold flex-shrink-0">
-              {details.ownerName!.charAt(0)}
+        <Card>
+          <CardHeader gradient>
+            <div className="flex items-center gap-2">
+              <Coins className="w-4 h-4 text-amber-600" />
+              <h3 className="font-semibold text-gray-900 text-sm">Owner</h3>
             </div>
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2 flex-wrap mb-1.5">
-                <h3 className="font-semibold text-lg text-gray-900">{details.ownerName}</h3>
-                <Badge variant="secondary">Owner</Badge>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-start gap-4">
+              <div className="w-12 h-12 rounded-full bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center text-white text-xl font-bold flex-shrink-0 shadow-sm">
+                {details.ownerName!.charAt(0)}
               </div>
-              {details.ownerBackground && (
-                <p className="text-sm text-gray-600 mb-2 leading-relaxed">{details.ownerBackground}</p>
-              )}
-              <LinkIcon url={details.ownerLinkedInUrl} />
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 flex-wrap mb-1.5">
+                  <h3 className="font-semibold text-lg text-gray-900 dark:text-gray-100">{details.ownerName}</h3>
+                  <Badge variant="secondary">Owner</Badge>
+                </div>
+                {details.ownerBackground && (
+                  <p className="text-sm text-gray-600 dark:text-gray-400 mb-2 leading-relaxed">{details.ownerBackground}</p>
+                )}
+                <LinkIcon url={details.ownerLinkedInUrl} />
+              </div>
             </div>
-          </div>
+          </CardContent>
         </Card>
       )}
 
       {hasCeo && (
-        <Card title="CEO">
-          <div className="flex items-start gap-4">
-            <div className="w-12 h-12 rounded-full bg-gradient-to-br from-purple-400 to-pink-400 flex items-center justify-center text-white text-xl font-bold flex-shrink-0">
-              {details.ceoName!.charAt(0)}
+        <Card>
+          <CardHeader gradient>
+            <div className="flex items-center gap-2">
+              <Briefcase className="w-4 h-4 text-purple-600" />
+              <h3 className="font-semibold text-gray-900 text-sm">CEO</h3>
             </div>
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2 flex-wrap mb-1.5">
-                <h3 className="font-semibold text-lg text-gray-900">{details.ceoName}</h3>
-                {wikiVerified?.ceoName && <Badge variant="success">✓ Wikipedia Verified</Badge>}
-                <Badge variant="accent">CEO</Badge>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-start gap-4">
+              <div className="w-12 h-12 rounded-full bg-gradient-to-br from-purple-400 to-pink-400 flex items-center justify-center text-white text-xl font-bold flex-shrink-0 shadow-sm">
+                {details.ceoName!.charAt(0)}
               </div>
-              <LinkIcon url={details.ceoLinkedInUrl} />
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 flex-wrap mb-1.5">
+                  <h3 className="font-semibold text-lg text-gray-900 dark:text-gray-100">{details.ceoName}</h3>
+                  {wikiVerified?.ceoName && <Badge variant="success">Wiki Verified</Badge>}
+                  <Badge variant="accent">CEO</Badge>
+                </div>
+                <LinkIcon url={details.ceoLinkedInUrl} />
+              </div>
             </div>
-          </div>
+          </CardContent>
         </Card>
       )}
 
       {(details.leadershipTeam && details.leadershipTeam.length > 0) && (
-        <Card title="Leadership Snapshot">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <div className="text-center p-3 bg-purple-50 rounded-lg">
-              <div className="text-2xl font-bold text-purple-700">{details.leadershipTeam.length}</div>
-              <div className="text-xs text-gray-500 mt-1">Total Members</div>
+        <Card>
+          <CardHeader gradient>
+            <div className="flex items-center gap-2">
+              <Users className="w-4 h-4 text-purple-600" />
+              <h3 className="font-semibold text-gray-900 text-sm">Leadership Snapshot</h3>
             </div>
-            <div className="text-center p-3 bg-cyan-50 rounded-lg">
-              <div className="text-2xl font-bold text-cyan-700">{details.founderName ? 1 : 0}</div>
-              <div className="text-xs text-gray-500 mt-1">Founders</div>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="text-center p-3 bg-purple-50 dark:bg-purple-900/20 rounded-lg">
+                <div className="text-2xl font-bold text-purple-700 dark:text-purple-300">{details.leadershipTeam.length}</div>
+                <div className="text-xs text-gray-500 mt-1">Total Members</div>
+              </div>
+              <div className="text-center p-3 bg-cyan-50 dark:bg-cyan-900/20 rounded-lg">
+                <div className="text-2xl font-bold text-cyan-700 dark:text-cyan-300">{founders.length}</div>
+                <div className="text-xs text-gray-500 mt-1">Founders</div>
+              </div>
+              <div className="text-center p-3 bg-amber-50 dark:bg-amber-900/20 rounded-lg">
+                <div className="text-2xl font-bold text-amber-700 dark:text-amber-300">{coFounders.length}</div>
+                <div className="text-xs text-gray-500 mt-1">Co-Founders</div>
+              </div>
+              <div className="text-center p-3 bg-pink-50 dark:bg-pink-900/20 rounded-lg">
+                <div className="text-2xl font-bold text-pink-700 dark:text-pink-300">{details.ceoName ? 1 : 0}</div>
+                <div className="text-xs text-gray-500 mt-1">CEOs</div>
+              </div>
             </div>
-            <div className="text-center p-3 bg-amber-50 rounded-lg">
-              <div className="text-2xl font-bold text-amber-700">{coFounders.length}</div>
-              <div className="text-xs text-gray-500 mt-1">Co-Founders</div>
-            </div>
-            <div className="text-center p-3 bg-pink-50 rounded-lg">
-              <div className="text-2xl font-bold text-pink-700">{details.ceoName ? 1 : 0}</div>
-              <div className="text-xs text-gray-500 mt-1">CEOs</div>
-            </div>
-          </div>
+          </CardContent>
         </Card>
       )}
 
-      {!details.founderName && coFounders.length === 0 && (
+      {founders.length === 0 && coFounders.length === 0 && (
         <Card>
-          <div className="text-center py-6 text-gray-400">
-            <p className="text-sm">No founder, owner, or co-founder details found for this brand.</p>
-            <p className="text-xs mt-1">Try re-evaluating with a different source URL or check the Company Info tab.</p>
-          </div>
+          <CardContent>
+            <div className="text-center py-6 text-gray-400">
+              <Users className="w-8 h-8 mx-auto mb-2" />
+              <p className="text-sm">No founder, owner, or co-founder details found for this brand.</p>
+              <p className="text-xs mt-1">Try re-evaluating with a different source URL or check the Company Info tab.</p>
+            </div>
+          </CardContent>
         </Card>
       )}
     </div>

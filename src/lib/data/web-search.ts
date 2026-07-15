@@ -16,10 +16,23 @@ export async function searchTeam(companyName: string): Promise<string> {
   const client = tavily({ apiKey })
 
   const queries = [
-    `"${companyName}" leadership team management executives`,
-    `"${companyName}" about us team members founders`,
-    `"${companyName}" management team bios background`,
+    `${companyName} founder CEO co-founder leadership`,
+    `${companyName} about us team founders`,
+    `${companyName} management team bios`,
   ]
+
+  // Build keywords from the company name to filter out unrelated results
+  const nameLower = companyName.toLowerCase().trim()
+  const clean = nameLower.replace(/\b(llp|ltd|inc|corp|llc|gmbh|pty)\b/gi, "").trim()
+  const words = clean.split(/\s+/).filter(Boolean)
+  const searchKeywords: string[] = [nameLower]
+  if (words.length >= 2) {
+    searchKeywords.push(words.slice(0, 2).join(" ")) // "phew interactive"
+  }
+  searchKeywords.push(nameLower.replace(/\s+/g, "")) // "phewinteractivellp"
+  if (words.length >= 2) {
+    searchKeywords.push(words.slice(0, 2).join(""))  // "phewinteractive"
+  }
 
   const allResults: string[] = []
 
@@ -31,7 +44,11 @@ export async function searchTeam(companyName: string): Promise<string> {
         includeAnswer: true,
       })
       for (const r of response.results) {
-        if (r.content) allResults.push(`[${r.title}](${r.url})\n${r.content.slice(0, 1000)}`)
+        if (!r.content) continue
+        const text = ((r.title || "") + " " + (r.content || "")).toLowerCase()
+        const mentionsCompany = searchKeywords.some(kw => kw.length > 3 && text.includes(kw))
+        if (!mentionsCompany) continue
+        allResults.push(`[${r.title}](${r.url})\n${r.content.slice(0, 1000)}`)
       }
     } catch {
       // skip
@@ -101,12 +118,15 @@ export async function searchCompany(url: string): Promise<SearchResult> {
     }
   }
 
+  const companyLower = companyName.toLowerCase().trim()
+
   const seen = new Set<string>()
   const uniqueResults = allResults
     .filter((r) => {
       if (seen.has(r.url)) return false
       seen.add(r.url)
-      return true
+      const text = ((r.title || "") + " " + (r.content || "")).toLowerCase()
+      return text.includes(companyLower)
     })
     .slice(0, 24)
 
@@ -115,7 +135,8 @@ export async function searchCompany(url: string): Promise<SearchResult> {
     .filter((r) => {
       if (reviewSeen.has(r.url)) return false
       reviewSeen.add(r.url)
-      return true
+      const text = ((r.title || "") + " " + (r.content || "")).toLowerCase()
+      return text.includes(companyLower)
     })
     .slice(0, 16)
 

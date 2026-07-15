@@ -1,3 +1,7 @@
+import { Badge } from "@/components/ui/badge"
+import { Card, CardHeader, CardContent } from "@/components/ui/card"
+import { Star, Building2, MapPin, Target, Eye, Heart, Users, Lightbulb, Globe, Award, TrendingUp } from "lucide-react"
+
 interface CompanyInfo {
   companyName: string | null
   industry: string | null
@@ -37,78 +41,143 @@ interface Props {
   info: CompanyInfo
 }
 
-function VerifiedBadge() {
-  return (
-    <span className="inline-flex items-center gap-1 px-1.5 py-0.5 text-[10px] font-medium bg-blue-100 text-blue-700 rounded ml-1.5">
-      <svg className="w-2.5 h-2.5" viewBox="0 0 24 24" fill="currentColor">
-        <path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z" />
-      </svg>
-      Wiki
-    </span>
-  )
-}
+const fieldConfig: { label: string; icon: typeof Star; key: keyof CompanyInfo | string }[] = [
+  { label: "Company", icon: Building2, key: "companyName" },
+  { label: "Industry", icon: Globe, key: "industry" },
+  { label: "Headquarters", icon: MapPin, key: "headquarters" },
+  { label: "Target Audience", icon: Users, key: "targetAudience" },
+  { label: "Mission", icon: Target, key: "brandMission" },
+  { label: "Vision", icon: Eye, key: "brandVision" },
+  { label: "USP", icon: Award, key: "usp" },
+  { label: "Brand Personality", icon: Heart, key: "brandPersonality" },
+  { label: "Primary CTA", icon: TrendingUp, key: "primaryCallToAction" },
+]
 
 export default function CompanyInfo({ info }: Props) {
-  const fields: { label: string; value: string | string[] | null; verified?: boolean }[] = [
-    { label: "Company", value: info.companyName },
-    { label: "Industry", value: info.industry, verified: info.wikipediaVerified?.industry },
-    { label: "Founder", value: info.companyDetails?.founderName || null, verified: info.wikipediaVerified?.founderName },
-    { label: "Owner", value: info.companyDetails?.ownerName || null },
-    { label: "CEO", value: info.companyDetails?.ceoName || null, verified: info.wikipediaVerified?.ceoName },
-    { label: "Description", value: info.businessDescription },
-    { label: "Target Audience", value: info.targetAudience },
-    { label: "Mission", value: info.brandMission },
-    { label: "Vision", value: info.brandVision },
-    { label: "Core Values", value: info.coreValues },
-    { label: "USP", value: info.usp },
-    { label: "Headquarters", value: info.headquarters, verified: info.wikipediaVerified?.headquarters },
-    { label: "Years in Business", value: info.yearsInBusiness, verified: info.wikipediaVerified?.foundedYear },
-    { label: "Brand Personality", value: info.brandPersonality },
-    { label: "Main Competitors", value: info.mainCompetitors },
-    { label: "Primary CTA", value: info.primaryCallToAction },
-  ]
+  function getValue(key: string) {
+    if (key === "companyName") return info.companyName as string | null
+    if (key === "industry") return info.industry
+    if (key === "headquarters") return info.headquarters
+    if (key === "targetAudience") return info.targetAudience
+    if (key === "brandMission") return info.brandMission
+    if (key === "brandVision") return info.brandVision
+    if (key === "usp") return info.usp
+    if (key === "brandPersonality") return info.brandPersonality
+    if (key === "primaryCallToAction") return info.primaryCallToAction
+    return null
+  }
+
+  function isVerified(key: string) {
+    if (key === "industry") return info.wikipediaVerified?.industry
+    if (key === "headquarters") return info.wikipediaVerified?.headquarters
+    return false
+  }
 
   return (
-    <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-      <div className="px-6 py-4 border-b border-gray-100 bg-gradient-to-r from-purple-50 to-cyan-50">
+    <Card>
+      <CardHeader gradient>
         <div className="flex items-center gap-2">
           <h3 className="font-semibold text-gray-900">Company Profile</h3>
-          <span className="text-[10px] text-gray-400 bg-white px-2 py-0.5 rounded-full border border-gray-200">
-            Data from website + Wikipedia
-          </span>
+          <Badge variant="slate" size="sm">Data from website + Wikipedia</Badge>
         </div>
-      </div>
-      <div className="divide-y divide-gray-50">
-        {fields.map((f) => {
-          if (!f.value || (Array.isArray(f.value) && f.value.length === 0)) return null
-          const display = Array.isArray(f.value) ? f.value.join(", ") : f.value
-          return (
-            <div key={f.label} className="px-6 py-3 flex items-start gap-4">
-              <span className="text-sm font-medium text-gray-400 w-36 flex-shrink-0">{f.label}</span>
-              <span className="text-sm text-gray-800 flex items-center gap-1">
-                {display}
-                {f.verified && <VerifiedBadge />}
+      </CardHeader>
+      <CardContent className="p-0">
+        <div className="divide-y divide-gray-50 dark:divide-gray-800">
+          {fieldConfig.map((f) => {
+            const value = getValue(f.key)
+            const verified = isVerified(f.key)
+            if (!value) return null
+            const Icon = f.icon
+            return (
+              <div key={f.key} className="px-6 py-3 flex items-start gap-4 hover:bg-gray-50/50 dark:hover:bg-gray-800/30 transition-colors">
+                <Icon className="w-4 h-4 text-gray-400 mt-0.5 flex-shrink-0" />
+                <span className="text-sm font-medium text-gray-400 w-28 flex-shrink-0">{f.label}</span>
+                <span className="text-sm text-gray-800 dark:text-gray-200 flex items-center gap-1.5">
+                  {value}
+                  {verified && <Badge variant="success" size="sm">Wiki</Badge>}
+                </span>
+              </div>
+            )
+          })}
+
+          {/* Founder / Owner / CEO */}
+          {info.companyDetails?.founderName && (
+            <div className="px-6 py-3 flex items-start gap-4 hover:bg-gray-50/50 dark:hover:bg-gray-800/30 transition-colors">
+              <Star className="w-4 h-4 text-purple-400 mt-0.5 flex-shrink-0" />
+              <span className="text-sm font-medium text-gray-400 w-28 flex-shrink-0">Founder</span>
+              <span className="text-sm text-gray-800 dark:text-gray-200">
+                {info.companyDetails.founderName}
+                {info.wikipediaVerified?.founderName && <Badge variant="success" size="sm" className="ml-1.5">Wiki</Badge>}
               </span>
             </div>
-          )
-        })}
-      </div>
-      {(info.websiteQuality || info.overallProfessionalism) && (
-        <div className="px-6 py-4 bg-gray-50 border-t border-gray-100">
-          {info.websiteQuality && (
-            <div className="mb-2">
-              <span className="text-xs font-medium text-gray-400 uppercase tracking-wider">Website Quality</span>
-              <p className="text-sm text-gray-700 mt-1">{info.websiteQuality}</p>
+          )}
+          {info.companyDetails?.ownerName && (
+            <div className="px-6 py-3 flex items-start gap-4 hover:bg-gray-50/50 dark:hover:bg-gray-800/30 transition-colors">
+              <Star className="w-4 h-4 text-amber-400 mt-0.5 flex-shrink-0" />
+              <span className="text-sm font-medium text-gray-400 w-28 flex-shrink-0">Owner</span>
+              <span className="text-sm text-gray-800 dark:text-gray-200">{info.companyDetails.ownerName}</span>
             </div>
           )}
-          {info.overallProfessionalism && (
-            <div>
-              <span className="text-xs font-medium text-gray-400 uppercase tracking-wider">Professionalism</span>
-              <p className="text-sm text-gray-700 mt-1">{info.overallProfessionalism}</p>
+          {info.companyDetails?.ceoName && (
+            <div className="px-6 py-3 flex items-start gap-4 hover:bg-gray-50/50 dark:hover:bg-gray-800/30 transition-colors">
+              <Star className="w-4 h-4 text-cyan-400 mt-0.5 flex-shrink-0" />
+              <span className="text-sm font-medium text-gray-400 w-28 flex-shrink-0">CEO</span>
+              <span className="text-sm text-gray-800 dark:text-gray-200">
+                {info.companyDetails.ceoName}
+                {info.wikipediaVerified?.ceoName && <Badge variant="success" size="sm" className="ml-1.5">Wiki</Badge>}
+              </span>
+            </div>
+          )}
+
+          {/* Core Values */}
+          {info.coreValues.length > 0 && (
+            <div className="px-6 py-3 flex items-start gap-4">
+              <Heart className="w-4 h-4 text-pink-400 mt-0.5 flex-shrink-0" />
+              <span className="text-sm font-medium text-gray-400 w-28 flex-shrink-0">Core Values</span>
+              <div className="flex flex-wrap gap-1.5">
+                {info.coreValues.map((v, i) => (
+                  <Badge key={i} variant="default" size="sm">{v}</Badge>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Competitors */}
+          {info.mainCompetitors.length > 0 && (
+            <div className="px-6 py-3 flex items-start gap-4">
+              <Users className="w-4 h-4 text-gray-400 mt-0.5 flex-shrink-0" />
+              <span className="text-sm font-medium text-gray-400 w-28 flex-shrink-0">Competitors</span>
+              <span className="text-sm text-gray-800 dark:text-gray-200">{info.mainCompetitors.join(", ")}</span>
+            </div>
+          )}
+
+          {/* Products */}
+          {info.productsOrServices.length > 0 && (
+            <div className="px-6 py-3 flex items-start gap-4">
+              <Lightbulb className="w-4 h-4 text-amber-400 mt-0.5 flex-shrink-0" />
+              <span className="text-sm font-medium text-gray-400 w-28 flex-shrink-0">Products</span>
+              <span className="text-sm text-gray-800 dark:text-gray-200">{info.productsOrServices.join(", ")}</span>
             </div>
           )}
         </div>
-      )}
-    </div>
+
+        {(info.websiteQuality || info.overallProfessionalism) && (
+          <div className="px-6 py-4 bg-gray-50 dark:bg-gray-800/50 border-t border-gray-100 dark:border-gray-800">
+            {info.websiteQuality && (
+              <div className="mb-2">
+                <span className="text-xs font-medium text-gray-400 uppercase tracking-wider">Website Quality</span>
+                <p className="text-sm text-gray-700 dark:text-gray-300 mt-1">{info.websiteQuality}</p>
+              </div>
+            )}
+            {info.overallProfessionalism && (
+              <div>
+                <span className="text-xs font-medium text-gray-400 uppercase tracking-wider">Professionalism</span>
+                <p className="text-sm text-gray-700 dark:text-gray-300 mt-1">{info.overallProfessionalism}</p>
+              </div>
+            )}
+          </div>
+        )}
+      </CardContent>
+    </Card>
   )
 }

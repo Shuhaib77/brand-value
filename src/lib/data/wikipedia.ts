@@ -68,10 +68,12 @@ export async function fetchWikipedia(companyName: string): Promise<WikipediaData
     // Pattern-based extraction
     const patterns: Record<string, RegExp[]> = {
       founderName: [
+        /(?:co-)?founders?\s+(?:are\s+|include\s+)?([^,\.]+(?:,\s*[^,\.]+)*(?:\s+and\s+[^,\.]+)?)/i,
+        /founded by\s+(?:brothers?\s+)?(.+?)(?:\s+and\s+|\s*,\s*)([^,\.]+)/i,
+        /founded by\s+(.+?)(?:\s*,\s*|\s+and\s+)(.+?)(?:\s*,\s*|\s+and\s+)(.+?)(?:\s*[,\.]|$)/i,
         /founded by\s+([^,\.]+)/i,
         /founded\s+(?:in\s+\d{4}\s+)?by\s+([^,\.]+)/i,
         /(?:co-)?founders?\s+(?:are\s+|include\s+)?([^,\.]+)/i,
-        /founded by\s+(?:brothers?\s+)?([^,\.]+)\s+and\s+([^,\.]+)/i,
       ],
       foundedYear: [
         /founded\s+in\s+(\d{4})/i,
@@ -113,7 +115,12 @@ export async function fetchWikipedia(companyName: string): Promise<WikipediaData
       for (const regex of regexes) {
         const match = extract.match(regex)
         if (match) {
-          (result as any)[key] = match[1].trim()
+          const groups = match.slice(1).filter(Boolean).map((g: string) => g.trim())
+          if (groups.length > 1) {
+            (result as any)[key] = groups.join(", ")
+          } else {
+            (result as any)[key] = groups[0] || null
+          }
           break
         }
       }

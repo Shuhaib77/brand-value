@@ -61,20 +61,23 @@ export interface ScrapedContent {
 }
 
 async function fetchPage(url: string): Promise<string | null> {
-  try {
-    const { data: html } = await axios.get(url, {
-      timeout: 8000,
-      headers: {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120.0.0.0 Safari/537.36",
-        Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-      },
-    })
-    const $ = cheerio.load(html)
-    $("script, style, nav, footer, iframe, noscript, header, .sidebar, .menu, .cookie").remove()
-    return $("body").text().replace(/\s+/g, " ").trim().slice(0, 8000)
-  } catch {
-    return null
+  for (let attempt = 0; attempt < 2; attempt++) {
+    try {
+      const { data: html } = await axios.get(url, {
+        timeout: 15000,
+        headers: {
+          "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120.0.0.0 Safari/537.36",
+          Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+        },
+      })
+      const $ = cheerio.load(html)
+      $("script, style, nav, footer, iframe, noscript, header, .sidebar, .menu, .cookie").remove()
+      return $("body").text().replace(/\s+/g, " ").trim().slice(0, 8000)
+    } catch {
+      if (attempt === 0) await new Promise(r => setTimeout(r, 500))
+    }
   }
+  return null
 }
 
 const SOCIAL_DOMAINS: Record<string, string[]> = {
@@ -94,7 +97,7 @@ function extractSocialLinks($: cheerio.CheerioAPI, base: string): { platform: st
 
   $("a[href]").each((_, el) => {
     const href = $(el).attr("href") || ""
-    let fullUrl = href.startsWith("http") ? href : href.startsWith("/") ? `${base}${href}` : null
+    const fullUrl = href.startsWith("http") ? href : href.startsWith("/") ? `${base}${href}` : null
     if (!fullUrl) return
 
     const lower = fullUrl.toLowerCase()
@@ -119,7 +122,7 @@ function discoverPageLinks($: cheerio.CheerioAPI, base: string): string[] {
 
   $("a[href]").each((_, el) => {
     const href = $(el).attr("href") || ""
-    let fullUrl = href.startsWith("http") ? href : href.startsWith("/") ? `${base}${href}` : null
+    const fullUrl = href.startsWith("http") ? href : href.startsWith("/") ? `${base}${href}` : null
     if (!fullUrl) return
 
     try {
@@ -235,7 +238,7 @@ export async function scrapeWebsite(url: string): Promise<ScrapedContent> {
   }
 
   const titleSuffixes = "Officer|Director|Manager|Lead|Head|Founder|Co-Founder|Owner|CEO|CTO|CFO|COO|President|VP|SVP|EVP|Engineer|Designer|Developer|Architect|Advisor|Evangelist|Partner|Consultant|Specialist|Coordinator|Analyst|Executive|Administrator|Supervisor|Assistant|Associate|Scientist|Researcher|Editor|Producer|Strategist|Planner|Buyer|Representative"
-  const nameTitleRegex = new RegExp(`([A-Z][a-zA-Z]+(?:\\s+[A-Z][a-zA-Z'.]+){1,3})\\s*[–\\-—|,:]\\s*([A-Za-z\\s/()]+(?:${titleSuffixes}))`, "g")
+  const nameTitleRegex = new RegExp(`([A-Z][a-zA-Z]+(?:\\s+[A-Z][a-zA-Z'.]*){1,3})\\s*[–\\-—|,:]\\s*([A-Za-z\\s/()]+(?:${titleSuffixes}))`, "g")
   let ntMatch
   while ((ntMatch = nameTitleRegex.exec(allText)) !== null) {
     const title = ntMatch[2].trim()
@@ -317,10 +320,10 @@ export async function scrapeWebsite(url: string): Promise<ScrapedContent> {
   let hasRobotsTxt = false
   let hasSitemapXml = false
   try {
-    const robotsRes = await axios.get(`${base}/robots.txt`, { timeout: 2000, validateStatus: (s) => s < 400 })
+    const robotsRes = await axios.get(`${base}/robots.txt`, { timeout: 1000, validateStatus: (s) => s < 400 })
     hasRobotsTxt = robotsRes.status === 200
     if (hasRobotsTxt) {
-      const sitemapRes = await axios.get(`${base}/sitemap.xml`, { timeout: 2000, validateStatus: (s) => s < 400 })
+      const sitemapRes = await axios.get(`${base}/sitemap.xml`, { timeout: 1000, validateStatus: (s) => s < 400 })
       hasSitemapXml = sitemapRes.status === 200
     }
   } catch {

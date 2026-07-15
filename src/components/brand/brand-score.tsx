@@ -1,4 +1,7 @@
+"use client"
+
 import { gradeMap, computeGrade } from "@/lib/constants"
+import CountUp from "@/components/ui/count-up"
 
 interface Props {
   score: number
@@ -7,8 +10,8 @@ interface Props {
 
 export default function BrandScore({ score, grade: _grade }: Props) {
   const grade = computeGrade(score)
-  const color = gradeMap[grade === "A+" ? "A_PLUS" : grade]?.color || "from-gray-500 to-gray-600"
-  const bg = gradeMap[grade === "A+" ? "A_PLUS" : grade]?.bg || "bg-gray-50 border-gray-200 text-gray-700"
+  const info = gradeMap[grade === "A+" ? "A_PLUS" : grade]
+  const bg = info?.bg || "bg-gray-50 border-gray-200 text-gray-700"
 
   function circlePath(cx: number, cy: number, r: number, percent: number) {
     const circumference = 2 * Math.PI * r
@@ -19,20 +22,15 @@ export default function BrandScore({ score, grade: _grade }: Props) {
   const { circumference, offset } = circlePath(120, 120, 100, score)
 
   return (
-    <div className="flex flex-col items-center">
-      <div className="relative w-60 h-60">
+    <div className="rounded-xl bg-white/80 backdrop-blur-md border border-white/20 shadow-lg p-6 sm:p-8 flex flex-col items-center">
+      <div className="relative w-56 h-56 sm:w-60 sm:h-60">
         <svg className="w-full h-full -rotate-90" viewBox="0 0 240 240">
+          <circle cx="120" cy="120" r="100" fill="none" stroke="#e5e7eb" strokeWidth="10" />
           <circle
             cx="120" cy="120" r="100"
             fill="none"
-            stroke="#e5e7eb"
-            strokeWidth="12"
-          />
-          <circle
-            cx="120" cy="120" r="100"
-            fill="none"
-            stroke={`url(#scoreGradient)`}
-            strokeWidth="12"
+            stroke="url(#scoreGradient)"
+            strokeWidth="10"
             strokeLinecap="round"
             strokeDasharray={circumference}
             strokeDashoffset={offset}
@@ -46,7 +44,9 @@ export default function BrandScore({ score, grade: _grade }: Props) {
           </defs>
         </svg>
         <div className="absolute inset-0 flex flex-col items-center justify-center">
-          <span className="text-5xl font-bold gradient-text">{score}</span>
+          <span className="text-5xl font-bold gradient-text">
+            <CountUp end={score} />
+          </span>
           <span className="text-sm text-gray-400 mt-1">out of 100</span>
         </div>
       </div>
