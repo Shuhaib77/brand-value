@@ -17,7 +17,7 @@ import Tabs from "@/components/ui/tabs"
 import { Card, CardHeader, CardContent } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Button } from "@/components/ui/button"
-import { BrandResult } from "@/types/brand"
+import { BrandResult, LeadershipMember } from "@/types/brand"
 import { generateBrandReport } from "@/lib/pdf/brand-report"
 
 const tabs = [
@@ -37,7 +37,7 @@ const fallbackDetails = {
   founderName: null, founderBackground: null, ceoName: null,
   ownerName: null, ownerBackground: null, founderLinkedInUrl: null,
   ceoLinkedInUrl: null, ownerLinkedInUrl: null,
-  leadershipTeam: [] as { name: string; title: string; bio?: string | null; linkedInUrl?: string | null; yearsAtCompany?: string | null }[],
+  leadershipTeam: [] as LeadershipMember[],
   employeeCount: null, foundedYear: null, fundingStage: null,
   investors: [] as string[], estimatedRevenue: null,
   awards: undefined as string[] | undefined,

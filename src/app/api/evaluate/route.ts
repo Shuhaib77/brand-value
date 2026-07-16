@@ -13,19 +13,26 @@ function toTitleCase(s: string): string {
 }
 
 function isLikelyPersonName(name: string): boolean {
-  const words = name.split(/\s+/).filter(Boolean)
+  const raw = name.split(/\s+/).filter(Boolean)
+  const words = raw.map(w => w.replace(/[.,;:!?"'()\[\]{}<>/\\|@#$%^&*+=~`´‘’“”«»—–-]+$/g, '').replace(/^[.,;:!?"'()\[\]{}<>/\\|@#$%^&*+=~`´‘’“”«»—–-]+/g, '')).filter(Boolean)
   if (words.length < 2 || words.length > 6) return false
-  if (/\b(Llp|Ltd|Inc|Corp|Co(?![a-z])|Company|Group|Technologies?|Enterprises?)\s*$/i.test(name)) return false
-  if (/^(of|at|in|on|by|for|to|the|a|an|and|or|about|creating|building|developing|leading|managing|contact|services|solutions|team|home|design|marketing|branding|strategy|technology|consulting)\s/i.test(name)) return false
+  const joined = words.join(' ')
+  if (/\b(Llp|Ltd|Inc|Corp|Co(?![a-z])|Company|Group|Technologies?|Enterprises?|Foundation|Platform|Studio|Studios|Agency|Consulting|Capital|Ventures|Lab|Labs)\s*$/i.test(joined)) return false
+  if (/^(of|at|in|on|by|for|to|the|a|an|and|or|about|creating|building|developing|leading|managing|contact|services|solutions|team|home|design|marketing|branding|strategy|technology|consulting|leadership|workforce|projects|happy|los|top|your|their|our|this|that|these|those|why|how|what|which|welcome|featured|com|md|ceo|founder|owner|null)\s/i.test(joined)) return false
   for (const w of words) {
-    if (/^(as|of|in|on|at|by|for|to|the|a|an|and|or|with|about|our|your|team)$/i.test(w)) return false
+    if (/^(as|of|in|on|at|by|for|to|the|a|an|and|or|with|about|our|your|team|their|who|can|do|back|this|that|these|those|its|his|her|what|which|where|when|how|will|would|has|have|been|being|was|were|are|is|does|did|done|los|delivered|clients|success|projects|happy|top|why|all|any|some|each|every|both|few|many|much|no|not|only|own|same|so|such|than|too|very|just|also|even|still|already|yet|almost|nearly|really|quite|actually|currently|previously|typically|usually|often|always|never|sometimes|eventually|formerly|originally|initially|welcome|featured|within|without|through|during|before|after|above|below|between|under|over|out|off|up|down|into|upon|about|ve|re|ll|don|didn|won|couldn|shouldn|hasn|haven|isn|aren|wasn|weren|doesn|com|md|ceo|founder|owner|null|nul)$/i.test(w)) return false
     if (w.includes('.') && !w.includes('.com')) return false
   }
-  if (/[a-z]{3,}ing$/i.test(words[0]) && words[0].length > 4) return false
-  if (words.length === 2 && /^(Partner|Director|Manager|Lead|Head|Chief|Member|Advisor|Consultant|Specialist)$/i.test(words[1])) return false
+  const gerundExclude = /^(king|wing|ring|sing|ping|thing|going|morning|evening)$/i
+  if (words.some(w => w.length > 4 && /[a-z]{3,}ing$/.test(w) && !gerundExclude.test(w))) return false
+  const pastExclude = /^(united|unified|advanced|related|included|limited|named|skilled|renowned|experienced|established)$/i
+  if (words.some(w => w.length > 5 && /[a-z]{3,}ed$/.test(w) && !pastExclude.test(w))) return false
+  if (words.length === 2 && /^(Partner|Director|Manager|Lead|Head|Chief|Member|Advisor|Consultant|Specialist|Delivered|Clients|Success)$/i.test(words[1])) return false
   if (words.length === 2 && words[0] === words[1]) return false
   const titleCount = words.filter(w => /^(Chief|Executive|Officer|Manager|Director|Head|Lead|Senior|Junior|Assistant|Associate)$/i.test(w)).length
   if (titleCount >= Math.ceil(words.length / 2)) return false
+  const funcCount = words.filter(w => /^(as|of|in|on|at|by|for|to|the|a|an|and|or|with|about|our|your|team|their|who|can|do|back|this|that|these|those|its|his|her|what|which|where|when|how|will|would|has|have|been|being|was|were|are|is|does|did|done|los|all|any|some|each|every|both|few|many|much|no|not|only|own|same|so|such|than|too|very|just|also|even|still|already|yet|almost|nearly|really|quite|actually|currently|previously|typically|usually|often|always|never|sometimes|eventually|formerly|originally|initially|within|without|through|during|before|after|above|below|between|under|over|out|off|up|down|into|upon|ve|re|ll|don|didn|won|couldn|shouldn|hasn|haven|isn|aren|wasn|weren|doesn|com|md|ceo|founder|owner|null)$/i.test(w)).length
+  if (funcCount >= Math.ceil(words.length / 2)) return false
   return true
 }
 
@@ -35,7 +42,7 @@ function extractPeopleFromText(text: string): { name: string; title: string }[] 
 
   const patterns: { regex: RegExp; title: (match: RegExpExecArray, groupIndex: number) => string }[] = [
     {
-      regex: /([A-Z][a-zA-Z]+(?:\s+[A-Z][a-zA-Z'.]*){0,3})\s*[–\-—|,:]\s*.*?(?:(?:Co-)?Founder|CEO|Owner|Partner|Managing\s*Director|Director)(?:\s+&\s+(?:Co-)?Founder)?/gi,
+      regex: /([A-Z][a-zA-Z]+(?:\s+[A-Z][a-zA-Z'.]*){0,3})\s*[–\-—|,:]\s*[^.!?]{0,100}?(?:(?:Co-)?Founder|CEO|Owner|Partner|Managing\s*Director|Director)(?:\s+&\s+(?:Co-)?Founder)?/gi,
       title: (m) => { const t = m[0].toLowerCase(); if (t.includes("co-founder")) return "Co-Founder"; if (t.includes("founder")) return "Founder"; if (t.includes("ceo")) return "CEO"; if (t.includes("owner")) return "Owner"; if (t.includes("partner")) return "Founder"; if (/managing\s*director/.test(t)) return "Managing Director"; return "Staff" },
     },
     {
@@ -56,6 +63,10 @@ function extractPeopleFromText(text: string): { name: string; title: string }[] 
     },
     {
       regex: /\|\s*\d+\s*\|\s*([A-Z][A-Z]+(?:\s+[A-Z][A-Z]+){1,3})\s*\|\s*\d{2}-\d{2}-\d{4}\s*\|/gi,
+      title: () => "Founder",
+    },
+    {
+      regex: /^\+\s*([A-Z][A-Z]+(?:\s+[A-Z][A-Z]+){1,3})\s*$/gim,
       title: () => "Founder",
     },
   ]
@@ -150,12 +161,13 @@ export async function POST(req: NextRequest) {
     const founderStr = extractedCd?.founderName
     if (founderStr && typeof founderStr === "string") {
       const parts = (founderStr as string).split(/,\s*|\s+and\s+/i).map((s: string) => s.trim()).filter(Boolean)
-      if (parts.length > 1 && extractedCd) {
-        extractedCd.founderName = parts[0]
+      const validParts = parts.filter(p => isLikelyPersonName(p))
+      if (validParts.length > 0 && extractedCd) {
+        extractedCd.founderName = validParts[0]
         const team = (extractedCd.leadershipTeam as { name: string; title?: string; bio?: string | null; linkedInUrl?: string | null; yearsAtCompany?: string | null }[]) || []
-        for (let i = 1; i < parts.length; i++) {
-          if (!team.some((m) => m.name === parts[i])) {
-            team.push({ name: parts[i], title: "Co-Founder", bio: null, linkedInUrl: null, yearsAtCompany: null })
+        for (let i = 1; i < validParts.length; i++) {
+          if (!team.some((m) => m.name === validParts[i])) {
+            team.push({ name: validParts[i], title: "Co-Founder", bio: null, linkedInUrl: null, yearsAtCompany: null })
           }
         }
         extractedCd.leadershipTeam = team
@@ -190,6 +202,19 @@ export async function POST(req: NextRequest) {
         }
       } catch {
         // Silently continue with original extraction data
+      }
+    }
+
+    // Re-validate after retry — retry bypasses isLikelyPersonName checks
+    if (extractedCd) {
+      if (extractedCd.founderName && !isLikelyPersonName(extractedCd.founderName as string)) {
+        extractedCd.founderName = null
+      }
+      if (extractedCd.ceoName && !isLikelyPersonName(extractedCd.ceoName as string)) {
+        extractedCd.ceoName = null
+      }
+      if (extractedCd.ownerName && !isLikelyPersonName(extractedCd.ownerName as string)) {
+        extractedCd.ownerName = null
       }
     }
 

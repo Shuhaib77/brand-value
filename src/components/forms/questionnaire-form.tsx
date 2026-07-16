@@ -11,6 +11,39 @@ interface Props {
   url: string
 }
 
+const CACHE_PREFIX = "brandCache:"
+const CACHE_TTL = 24 * 60 * 60 * 1000
+const CACHE_VERSION = 2
+
+function cacheKey(url: string): string {
+  return `${CACHE_PREFIX}v${CACHE_VERSION}-${url.trim().toLowerCase()}`
+}
+
+function getCachedResult(url: string): unknown {
+  try {
+    const key = cacheKey(url)
+    const raw = localStorage.getItem(key)
+    if (!raw) return null
+    const { data, timestamp } = JSON.parse(raw)
+    if (Date.now() - timestamp > CACHE_TTL) {
+      localStorage.removeItem(key)
+      return null
+    }
+    return data
+  } catch {
+    return null
+  }
+}
+
+function setCachedResult(url: string, data: unknown): void {
+  try {
+    const key = cacheKey(url)
+    localStorage.setItem(key, JSON.stringify({ data, timestamp: Date.now() }))
+  } catch {
+    // localStorage full or unavailable
+  }
+}
+
 export default function QuestionnaireForm({ url }: Props) {
   const [answers, setAnswers] = useState<Record<string, string>>({})
   const [loading, setLoading] = useState(false)
@@ -26,6 +59,13 @@ export default function QuestionnaireForm({ url }: Props) {
     setError("")
 
     try {
+      const cached = getCachedResult(url)
+      if (cached) {
+        sessionStorage.setItem("brandResult", JSON.stringify(cached))
+        router.push("/results")
+        return
+      }
+
       const res = await fetch("/api/evaluate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -38,6 +78,7 @@ export default function QuestionnaireForm({ url }: Props) {
         throw new Error(data.error || "Evaluation failed")
       }
 
+      setCachedResult(url, data)
       sessionStorage.setItem("brandResult", JSON.stringify(data))
       router.push("/results")
     } catch (err: unknown) {

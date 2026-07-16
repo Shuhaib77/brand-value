@@ -60,11 +60,14 @@ export interface ScrapedContent {
   technicalChecks: TechnicalChecks
 }
 
+const SUBPAGE_BATCH_SIZE = 10
+const SUBPAGE_TIMEOUT = 8000
+
 async function fetchPage(url: string): Promise<string | null> {
   for (let attempt = 0; attempt < 2; attempt++) {
     try {
       const { data: html } = await axios.get(url, {
-        timeout: 15000,
+        timeout: SUBPAGE_TIMEOUT,
         headers: {
           "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120.0.0.0 Safari/537.36",
           Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
@@ -210,9 +213,8 @@ export async function scrapeWebsite(url: string): Promise<ScrapedContent> {
 
   const pages: { slug: string; text: string }[] = []
 
-  const batchSize = 3
-  for (let i = 0; i < slugs.length; i += batchSize) {
-    const batch = slugs.slice(i, i + batchSize)
+  for (let i = 0; i < slugs.length; i += SUBPAGE_BATCH_SIZE) {
+    const batch = slugs.slice(i, i + SUBPAGE_BATCH_SIZE)
     const results = await Promise.all(batch.map((slug) => fetchPage(`${base}/${slug}`)))
     batch.forEach((slug, idx) => {
       if (results[idx]) pages.push({ slug, text: results[idx]! })

@@ -1,43 +1,11 @@
 import { Card, CardHeader, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Users, Calendar, DollarSign, Building2, Trophy, Award, Shield, Target, ExternalLink, Star, Briefcase } from "lucide-react"
-
-interface LeadershipMember {
-  name: string
-  title: string
-  bio?: string | null
-  linkedInUrl?: string | null
-  yearsAtCompany?: string | null
-}
-
-interface CompanyDetails {
-  founderName: string | null
-  founderBackground: string | null
-  ceoName: string | null
-  ownerName?: string | null
-  ownerBackground?: string | null
-  leadershipTeam: LeadershipMember[]
-  employeeCount: string | null
-  foundedYear: string | null
-  fundingStage: string | null
-  investors: string[]
-  estimatedRevenue: string | null
-  awards?: string[]
-  certifications?: string[]
-  partnerships?: string[]
-  companyCulture?: string | null
-}
+import type { CompanyDetails, WikipediaVerified } from "@/types/brand"
 
 interface Props {
   details: CompanyDetails
-  wikiVerified?: {
-    founderName: boolean
-    foundedYear: boolean
-    employeeCount: boolean
-    headquarters: boolean
-    industry: boolean
-    ceoName: boolean
-  }
+  wikiVerified?: WikipediaVerified
 }
 
 function Field({ label, children, verified }: { label: string; children: React.ReactNode; verified?: boolean }) {

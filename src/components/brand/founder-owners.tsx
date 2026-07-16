@@ -3,46 +3,11 @@
 import { Card, CardHeader, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Users, Star, ExternalLink, Briefcase, Crown, Coins } from "lucide-react"
-
-interface LeadershipMember {
-  name: string
-  title: string
-  bio?: string | null
-  linkedInUrl?: string | null
-  yearsAtCompany?: string | null
-}
-
-interface CompanyDetails {
-  founderName: string | null
-  founderBackground: string | null
-  founderLinkedInUrl?: string | null
-  ceoName: string | null
-  ceoLinkedInUrl?: string | null
-  ownerName?: string | null
-  ownerBackground?: string | null
-  ownerLinkedInUrl?: string | null
-  leadershipTeam: LeadershipMember[]
-  employeeCount: string | null
-  foundedYear: string | null
-  fundingStage: string | null
-  investors: string[]
-  estimatedRevenue: string | null
-  awards?: string[]
-  certifications?: string[]
-  partnerships?: string[]
-  companyCulture?: string | null
-}
+import type { CompanyDetails, WikipediaVerified } from "@/types/brand"
 
 interface FounderOwnersProps {
   details?: CompanyDetails
-  wikiVerified?: {
-    founderName: boolean
-    foundedYear: boolean
-    employeeCount: boolean
-    headquarters: boolean
-    industry: boolean
-    ceoName: boolean
-  } | null
+  wikiVerified?: WikipediaVerified | null
 }
 
 function LinkIcon({ url }: { url: string | null | undefined }) {

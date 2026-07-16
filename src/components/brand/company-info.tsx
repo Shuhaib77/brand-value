@@ -1,41 +1,7 @@
 import { Badge } from "@/components/ui/badge"
 import { Card, CardHeader, CardContent } from "@/components/ui/card"
 import { Star, Building2, MapPin, Target, Eye, Heart, Users, Lightbulb, Globe, Award, TrendingUp } from "lucide-react"
-
-interface CompanyInfo {
-  companyName: string | null
-  industry: string | null
-  productsOrServices: string[]
-  businessDescription: string | null
-  targetAudience: string | null
-  brandMission: string | null
-  brandVision: string | null
-  coreValues: string[]
-  usp: string | null
-  headquarters: string | null
-  yearsInBusiness: string | null
-  brandPersonality: string | null
-  mainCompetitors: string[]
-  primaryCallToAction: string | null
-  websiteQuality: string | null
-  overallProfessionalism: string | null
-  wikipediaVerified?: {
-    founderName: boolean
-    foundedYear: boolean
-    employeeCount: boolean
-    revenue: boolean
-    headquarters: boolean
-    industry: boolean
-    ceoName: boolean
-  }
-  companyDetails?: {
-    founderName: string | null
-    founderBackground: string | null
-    ceoName: string | null
-    ownerName?: string | null
-    ownerBackground?: string | null
-  }
-}
+import type { CompanyInfo } from "@/types/brand"
 
 interface Props {
   info: CompanyInfo
@@ -130,7 +96,7 @@ export default function CompanyInfo({ info }: Props) {
           )}
 
           {/* Core Values */}
-          {info.coreValues.length > 0 && (
+          {(info.coreValues ?? []).length > 0 && (
             <div className="px-6 py-3 flex items-start gap-4">
               <Heart className="w-4 h-4 text-pink-400 mt-0.5 flex-shrink-0" />
               <span className="text-sm font-medium text-gray-400 w-28 flex-shrink-0">Core Values</span>
@@ -143,7 +109,7 @@ export default function CompanyInfo({ info }: Props) {
           )}
 
           {/* Competitors */}
-          {info.mainCompetitors.length > 0 && (
+          {(info.mainCompetitors ?? []).length > 0 && (
             <div className="px-6 py-3 flex items-start gap-4">
               <Users className="w-4 h-4 text-gray-400 mt-0.5 flex-shrink-0" />
               <span className="text-sm font-medium text-gray-400 w-28 flex-shrink-0">Competitors</span>
@@ -152,7 +118,7 @@ export default function CompanyInfo({ info }: Props) {
           )}
 
           {/* Products */}
-          {info.productsOrServices.length > 0 && (
+          {(info.productsOrServices ?? []).length > 0 && (
             <div className="px-6 py-3 flex items-start gap-4">
               <Lightbulb className="w-4 h-4 text-amber-400 mt-0.5 flex-shrink-0" />
               <span className="text-sm font-medium text-gray-400 w-28 flex-shrink-0">Products</span>
